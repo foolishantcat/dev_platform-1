@@ -1,0 +1,128 @@
+package conn_pool
+
+import (
+	"logger"
+	"net"
+	"time"
+)
+
+type CSyncConn struct {
+	stat            bool
+	max_refer_nums  int
+	has_refer_nums  int
+	max_packet_size int
+	packet_buf      []byte
+	conn            net.Conn
+	res_handle      func(net_addr string, recv_buf []byte, contxt interface{}) int
+	remote_addr     string
+	pool            *CSyncConnPool
+}
+
+func (this *CSyncConn) Request(send_buf []byte, wait_time int, contxt interface{}) bool {
+
+	offset := 0
+	log_obj := logger.Instance()
+	result := false
+
+	if !this.isOk() {
+		if !this.connect() {
+			return false
+		}
+	}
+
+	defer func() {
+
+		if !result {
+			this.conn.Close()
+			this.stat = false
+			this.has_refer_nums = 0
+		}
+
+	}()
+
+	_, err := this.conn.Write(send_buf)
+	if err != nil {
+		log_obj.LogSysWarn("Write Failed!remoteIP=%s,ErrString=%s", this.remote_addr, err.Error())
+
+		return result
+	}
+
+	// 等待响应
+	if wait_time >= 0 {
+		final_elasped_time := time.Now().Unix() + int64(wait_time)
+		for {
+			wait_time = int(final_elasped_time - time.Now().Unix())
+			this.conn.SetReadDeadline(time.Now().Add(time.Duration(wait_time) * time.Second))
+			size, err := this.conn.Read(this.packet_buf[offset:])
+			if err != nil {
+				log_obj.LogSysWarn("Read Failed!remoteIP=%s,ErrString=%s", this.remote_addr, err.Error())
+
+				return result
+			}
+
+			// 包的缓冲区已经满
+			if offset >= this.max_packet_size {
+				log_obj.LogSysWarn("Packet Buf Empty!remoteIP=%s", this.remote_addr)
+
+				return result
+			}
+			offset += size
+			if this.res_handle(this.remote_addr, this.packet_buf[0:offset], contxt) == PARSE_OVER { //
+				break
+			}
+		}
+	}
+
+	// 引用计数加一
+	this.has_refer_nums++
+	return true
+}
+
+func (this *CSyncConn) Close() {
+	if this.has_refer_nums >= this.max_refer_nums { // 引用计数用完
+		this.conn.Close()
+		this.stat = false
+		this.has_refer_nums = 0
+	}
+
+	// deatch
+	this.pool.detach(this)
+}
+
+func (this *CSyncConn) isOk() bool {
+	return this.stat
+}
+
+func (this *CSyncConn) connect() bool {
+	conn, err := net.DialTimeout("tcp", this.remote_addr, 10*time.Second)
+	if err != nil {
+		// 连接不成功
+		this.stat = false
+		return false
+	}
+
+	this.stat = true
+	this.conn = conn
+	return true
+}
+
+func createSyncConn(remote_ip string,
+	max_refer_nums int,
+	max_packet_size int,
+	res_handle func(net_addr string, recv_buf []byte, contxt interface{}) int,
+	create_pool *CSyncConnPool) *CSyncConn {
+
+	conn := &CSyncConn{
+		stat:            false,
+		remote_addr:     remote_ip,
+		max_refer_nums:  max_refer_nums,
+		has_refer_nums:  0,
+		conn:            nil,
+		max_packet_size: max_packet_size,
+		packet_buf:      make([]byte, max_packet_size),
+		res_handle:      res_handle,
+		pool:            create_pool,
+	}
+
+	return conn
+}

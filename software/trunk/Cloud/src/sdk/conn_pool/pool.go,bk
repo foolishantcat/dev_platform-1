@@ -1,0 +1,108 @@
+package conn_pool
+
+import (
+	"container/list"
+	"sync"
+)
+
+const (
+	PARSE_OVER = 1
+	PARSE_NEXT = 2
+)
+
+type ConnsConfig struct {
+	incream_conns   int
+	min_conn_nums   int
+	max_conn_nums   int
+	max_packet_size int
+}
+
+type CSyncConnPool struct {
+	idle_list        list.List
+	has_conn_nums    int
+	stop_flag        bool
+	lock             *sync.Mutex
+	min_conns        int
+	max_conns        int
+	incream_conns    int
+	max_refer_counts int
+	max_packet_size  int
+	remote_ip        string
+	res_handle       func(net_addr string, recv_buf []byte, contxt interface{}) int
+}
+
+func (this *CSyncConnPool) Open() *CSyncConn {
+	this.lock.Lock()
+
+	if this.idle_list.Len() <= 0 {
+		// 创建新的synConn
+
+		for i := 0; i < this.incream_conns; i++ {
+			if this.has_conn_nums >= this.max_conns {
+				break
+			}
+			this.idle_list.PushBack(createSyncConn(this.remote_ip,
+				this.max_refer_counts,
+				this.max_packet_size,
+				this.res_handle,
+				this))
+
+			this.has_conn_nums++
+		}
+
+		// mark
+		if this.idle_list.Len() <= 0 {
+			return nil
+		}
+
+	}
+
+	conn := this.idle_list.Remove(this.idle_list.Front()).(*CSyncConn)
+	this.lock.Unlock()
+	return conn
+}
+
+func (this *CSyncConnPool) Stop() {
+
+}
+
+func (this *CSyncConnPool) detach(conn *CSyncConn) {
+	this.lock.Lock()
+
+	this.idle_list.PushBack(conn)
+	if this.stop_flag { // 停止标志
+		if this.idle_list.Len() >= this.has_conn_nums {
+			element := this.idle_list.Front()
+			for ; element != nil; element = element.Next() {
+				conn := element.Value.(*CSyncConn)
+				if conn.isOk() {
+					conn.Close()
+				}
+			}
+		}
+	}
+
+	this.lock.Unlock()
+}
+
+func NewSynConnPool(remote_ip string,
+	config *ConnsConfig,
+	res_handle func(net_addr string, recv_buf []byte, contxt interface{}) int) *CSyncConnPool {
+	pool := &CSyncConnPool{
+		min_conns:       config.min_conn_nums,
+		max_conns:       config.max_conn_nums,
+		incream_conns:   config.incream_conns,
+		max_packet_size: config.max_packet_size,
+		remote_ip:       remote_ip,
+		res_handle:      res_handle,
+		lock:            new(sync.Mutex),
+		stop_flag:       false,
+	}
+
+	for i := 0; i < pool.min_conns; i++ {
+		conn := createSyncConn(remote_ip, config.max_refer_counts, config.max_packet_size, res_handle, pool)
+		pool.idle_list.PushBack(conn)
+	}
+
+	return pool
+}
