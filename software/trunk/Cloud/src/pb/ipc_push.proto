@@ -1,0 +1,53 @@
+package protol;
+
+message DevOnline{
+	required int64 duid = 1;
+}
+
+message DevOffline{
+	required int64 duid = 1;
+}
+
+message DevAlive{
+	repeated int64 duid = 1;
+	required int32 net_time_sec = 2;
+}
+
+enum ResultType{
+	SUCCEED = 0;
+	FAILED = -1;
+  }
+
+message PushDataReq{
+	required int64 duid = 1;
+	required string msg_data = 2;
+	required int32 expire_time = 3;
+}
+
+// 外部服务调用rpc协议
+message PushDataRes{
+	required ResultType result = 2;
+}
+
+message PushBatchReq{
+	repeated PushDataReq push_batchs = 1;
+}
+
+message PushBatchRes{
+	required ResultType result = 2;
+}
+
+// 推送给设备的信息
+message PushDeviceReq{
+	required int64 duid = 1;
+	required int32 msg_id =2;
+	required string msg_data = 3;
+}
+
+message PushDeviceRes{
+	required int64 duid = 1;
+	required int32 msg_id = 2;
+	required int32 result = 3;
+}
+
+
