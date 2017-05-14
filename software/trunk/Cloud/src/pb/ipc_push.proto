@@ -1,53 +1,56 @@
 package protol;
 
-message DevOnline{
-	required int64 duid = 1;
+message DevStat{
+  required int64 duid = 1;
+    required int64 last_msg_id=2;
 }
 
 message DevOffline{
-	required int64 duid = 1;
+  required int64 duid = 1;
 }
 
-message DevAlive{
-	repeated int64 duid = 1;
-	required int32 net_time_sec = 2;
+message DevsOnline{
+  repeated DevStat dev_online = 1;
+  required int32 net_time_sec = 2;
 }
 
 enum ResultType{
-	SUCCEED = 0;
-	FAILED = -1;
+  SUCCEED = 0;
+  FAILED = -1;
   }
 
-message PushDataReq{
-	required int64 duid = 1;
-	required string msg_data = 2;
-	required int32 expire_time = 3;
+message DataOccur{
+  	required int64 duid = 1;
 }
 
-// 外部服务调用rpc协议
-message PushDataRes{
-	required ResultType result = 2;
+message DataReq{
+	required int64 duid=1;
+	required int64 lat_msg_id=2;
 }
 
-message PushBatchReq{
-	repeated PushDataReq push_batchs = 1;
+message DataRes{
+   	required int64 duid=1;
+   	required int64 msg_id=2;
+   	required int64 msg_data=3;
 }
 
-message PushBatchRes{
-	required ResultType result = 2;
+message DataResBatchs{
+   	repeated DataRes data_batchs=1;
 }
 
+
+// 外部调用rpc协议
 // 推送给设备的信息
 message PushDeviceReq{
-	required int64 duid = 1;
-	required int32 msg_id =2;
-	required string msg_data = 3;
+  	required int64 duid = 1;
+  	required bytes msg_data = 2;
 }
 
-message PushDeviceRes{
-	required int64 duid = 1;
-	required int32 msg_id = 2;
-	required int32 result = 3;
+// 批量推送设备的消息
+message PushBatchsReq{
+  	repeated PushDeviceReq batchs = 1;
 }
 
-
+message PushBatchsRes{
+  	required int32 result = 1;
+}
