@@ -1,12 +1,12 @@
 package protol;
 
 message DevStat{
-  required int64 duid = 1;
+  required string duid = 1;
     required int64 last_msg_id=2;
 }
 
 message DevOffline{
-  required int64 duid = 1;
+  required string duid = 1;
 }
 
 message DevsOnline{
@@ -14,24 +14,19 @@ message DevsOnline{
   required int32 net_time_sec = 2;
 }
 
-enum ResultType{
-  SUCCEED = 0;
-  FAILED = -1;
-  }
-
 message DataOccur{
-  	required int64 duid = 1;
+  	required string duid = 1;
 }
 
 message DataReq{
-	required int64 duid=1;
+	required string duid=1;
 	required int64 lat_msg_id=2;
 }
 
 message DataRes{
-   	required int64 duid=1;
+   	required string duid=1;
    	required int64 msg_id=2;
-   	required int64 msg_data=3;
+   	required bytes msg_data=3;
 }
 
 message DataResBatchs{
@@ -42,8 +37,9 @@ message DataResBatchs{
 // 外部调用rpc协议
 // 推送给设备的信息
 message PushDeviceReq{
-  	required int64 duid = 1;
+  	required string duid = 1;
   	required bytes msg_data = 2;
+	required int32 expire_time=3;
 }
 
 // 批量推送设备的消息
