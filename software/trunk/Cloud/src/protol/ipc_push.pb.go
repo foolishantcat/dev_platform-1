@@ -9,15 +9,18 @@ It is generated from these files:
 	ipc_push.proto
 
 It has these top-level messages:
-	DevOnline
+	DevStat
 	DevOffline
-	DevAlive
-	PushDataReq
-	PushDataRes
-	PushBatchReq
-	PushBatchRes
+	DevOnline
+	DevsAlive
+	DataOccur
+	DataReq
+	DataRes
+	DataResBatchs
 	PushDeviceReq
 	PushDeviceRes
+	PushDevBatchsReq
+	PushDevBatchsRes
 */
 package protol
 
@@ -36,60 +39,34 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type ResultType int32
-
-const (
-	ResultType_SUCCEED ResultType = 0
-	ResultType_FAILED  ResultType = -1
-)
-
-var ResultType_name = map[int32]string{
-	0:  "SUCCEED",
-	-1: "FAILED",
-}
-var ResultType_value = map[string]int32{
-	"SUCCEED": 0,
-	"FAILED":  -1,
+type DevStat struct {
+	Duid             *string `protobuf:"bytes,1,req,name=duid" json:"duid,omitempty"`
+	LastMsgId        *int64  `protobuf:"varint,2,req,name=last_msg_id,json=lastMsgId" json:"last_msg_id,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
 }
 
-func (x ResultType) Enum() *ResultType {
-	p := new(ResultType)
-	*p = x
-	return p
-}
-func (x ResultType) String() string {
-	return proto.EnumName(ResultType_name, int32(x))
-}
-func (x *ResultType) UnmarshalJSON(data []byte) error {
-	value, err := proto.UnmarshalJSONEnum(ResultType_value, data, "ResultType")
-	if err != nil {
-		return err
-	}
-	*x = ResultType(value)
-	return nil
-}
-func (ResultType) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (m *DevStat) Reset()                    { *m = DevStat{} }
+func (m *DevStat) String() string            { return proto.CompactTextString(m) }
+func (*DevStat) ProtoMessage()               {}
+func (*DevStat) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-type DevOnline struct {
-	Duid             *int64 `protobuf:"varint,1,req,name=duid" json:"duid,omitempty"`
-	XXX_unrecognized []byte `json:"-"`
-}
-
-func (m *DevOnline) Reset()                    { *m = DevOnline{} }
-func (m *DevOnline) String() string            { return proto.CompactTextString(m) }
-func (*DevOnline) ProtoMessage()               {}
-func (*DevOnline) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
-
-func (m *DevOnline) GetDuid() int64 {
+func (m *DevStat) GetDuid() string {
 	if m != nil && m.Duid != nil {
 		return *m.Duid
+	}
+	return ""
+}
+
+func (m *DevStat) GetLastMsgId() int64 {
+	if m != nil && m.LastMsgId != nil {
+		return *m.LastMsgId
 	}
 	return 0
 }
 
 type DevOffline struct {
-	Duid             *int64 `protobuf:"varint,1,req,name=duid" json:"duid,omitempty"`
-	XXX_unrecognized []byte `json:"-"`
+	Duid             *string `protobuf:"bytes,1,req,name=duid" json:"duid,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
 }
 
 func (m *DevOffline) Reset()                    { *m = DevOffline{} }
@@ -97,181 +74,207 @@ func (m *DevOffline) String() string            { return proto.CompactTextString
 func (*DevOffline) ProtoMessage()               {}
 func (*DevOffline) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
-func (m *DevOffline) GetDuid() int64 {
+func (m *DevOffline) GetDuid() string {
 	if m != nil && m.Duid != nil {
 		return *m.Duid
+	}
+	return ""
+}
+
+type DevOnline struct {
+	Duid             *string `protobuf:"bytes,1,req,name=duid" json:"duid,omitempty"`
+	LastMsgId        *int64  `protobuf:"varint,2,req,name=last_msg_id,json=lastMsgId" json:"last_msg_id,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
+}
+
+func (m *DevOnline) Reset()                    { *m = DevOnline{} }
+func (m *DevOnline) String() string            { return proto.CompactTextString(m) }
+func (*DevOnline) ProtoMessage()               {}
+func (*DevOnline) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+func (m *DevOnline) GetDuid() string {
+	if m != nil && m.Duid != nil {
+		return *m.Duid
+	}
+	return ""
+}
+
+func (m *DevOnline) GetLastMsgId() int64 {
+	if m != nil && m.LastMsgId != nil {
+		return *m.LastMsgId
 	}
 	return 0
 }
 
-type DevAlive struct {
-	Duid             []int64 `protobuf:"varint,1,rep,name=duid" json:"duid,omitempty"`
-	NetTimeSec       *int32  `protobuf:"varint,2,req,name=net_time_sec,json=netTimeSec" json:"net_time_sec,omitempty"`
-	XXX_unrecognized []byte  `json:"-"`
+type DevsAlive struct {
+	DevOnline        []*DevStat `protobuf:"bytes,1,rep,name=dev_online,json=devOnline" json:"dev_online,omitempty"`
+	NetTimeSec       *int32     `protobuf:"varint,2,req,name=net_time_sec,json=netTimeSec" json:"net_time_sec,omitempty"`
+	XXX_unrecognized []byte     `json:"-"`
 }
 
-func (m *DevAlive) Reset()                    { *m = DevAlive{} }
-func (m *DevAlive) String() string            { return proto.CompactTextString(m) }
-func (*DevAlive) ProtoMessage()               {}
-func (*DevAlive) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (m *DevsAlive) Reset()                    { *m = DevsAlive{} }
+func (m *DevsAlive) String() string            { return proto.CompactTextString(m) }
+func (*DevsAlive) ProtoMessage()               {}
+func (*DevsAlive) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
 
-func (m *DevAlive) GetDuid() []int64 {
+func (m *DevsAlive) GetDevOnline() []*DevStat {
 	if m != nil {
-		return m.Duid
+		return m.DevOnline
 	}
 	return nil
 }
 
-func (m *DevAlive) GetNetTimeSec() int32 {
+func (m *DevsAlive) GetNetTimeSec() int32 {
 	if m != nil && m.NetTimeSec != nil {
 		return *m.NetTimeSec
 	}
 	return 0
 }
 
-type PushDataReq struct {
-	Duid             *int64  `protobuf:"varint,1,req,name=duid" json:"duid,omitempty"`
-	MsgData          *string `protobuf:"bytes,2,req,name=msg_data,json=msgData" json:"msg_data,omitempty"`
-	ExpireTime       *int32  `protobuf:"varint,3,req,name=expire_time,json=expireTime" json:"expire_time,omitempty"`
+type DataOccur struct {
+	Duid             *string `protobuf:"bytes,1,req,name=duid" json:"duid,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
-func (m *PushDataReq) Reset()                    { *m = PushDataReq{} }
-func (m *PushDataReq) String() string            { return proto.CompactTextString(m) }
-func (*PushDataReq) ProtoMessage()               {}
-func (*PushDataReq) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+func (m *DataOccur) Reset()                    { *m = DataOccur{} }
+func (m *DataOccur) String() string            { return proto.CompactTextString(m) }
+func (*DataOccur) ProtoMessage()               {}
+func (*DataOccur) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
 
-func (m *PushDataReq) GetDuid() int64 {
+func (m *DataOccur) GetDuid() string {
 	if m != nil && m.Duid != nil {
 		return *m.Duid
-	}
-	return 0
-}
-
-func (m *PushDataReq) GetMsgData() string {
-	if m != nil && m.MsgData != nil {
-		return *m.MsgData
 	}
 	return ""
 }
 
-func (m *PushDataReq) GetExpireTime() int32 {
-	if m != nil && m.ExpireTime != nil {
-		return *m.ExpireTime
+type DataReq struct {
+	Duid             *string `protobuf:"bytes,1,req,name=duid" json:"duid,omitempty"`
+	LatMsgId         *int64  `protobuf:"varint,2,req,name=lat_msg_id,json=latMsgId" json:"lat_msg_id,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
+}
+
+func (m *DataReq) Reset()                    { *m = DataReq{} }
+func (m *DataReq) String() string            { return proto.CompactTextString(m) }
+func (*DataReq) ProtoMessage()               {}
+func (*DataReq) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+
+func (m *DataReq) GetDuid() string {
+	if m != nil && m.Duid != nil {
+		return *m.Duid
+	}
+	return ""
+}
+
+func (m *DataReq) GetLatMsgId() int64 {
+	if m != nil && m.LatMsgId != nil {
+		return *m.LatMsgId
 	}
 	return 0
 }
 
-// 外部服务调用rpc协议
-type PushDataRes struct {
-	Result           *ResultType `protobuf:"varint,2,req,name=result,enum=protol.ResultType" json:"result,omitempty"`
-	XXX_unrecognized []byte      `json:"-"`
+type DataRes struct {
+	Duid             *string `protobuf:"bytes,1,req,name=duid" json:"duid,omitempty"`
+	MsgId            *int64  `protobuf:"varint,2,req,name=msg_id,json=msgId" json:"msg_id,omitempty"`
+	MsgData          []byte  `protobuf:"bytes,3,req,name=msg_data,json=msgData" json:"msg_data,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
 }
 
-func (m *PushDataRes) Reset()                    { *m = PushDataRes{} }
-func (m *PushDataRes) String() string            { return proto.CompactTextString(m) }
-func (*PushDataRes) ProtoMessage()               {}
-func (*PushDataRes) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+func (m *DataRes) Reset()                    { *m = DataRes{} }
+func (m *DataRes) String() string            { return proto.CompactTextString(m) }
+func (*DataRes) ProtoMessage()               {}
+func (*DataRes) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
 
-func (m *PushDataRes) GetResult() ResultType {
-	if m != nil && m.Result != nil {
-		return *m.Result
+func (m *DataRes) GetDuid() string {
+	if m != nil && m.Duid != nil {
+		return *m.Duid
 	}
-	return ResultType_SUCCEED
+	return ""
 }
 
-type PushBatchReq struct {
-	PushBatchs       []*PushDataReq `protobuf:"bytes,1,rep,name=push_batchs,json=pushBatchs" json:"push_batchs,omitempty"`
-	XXX_unrecognized []byte         `json:"-"`
+func (m *DataRes) GetMsgId() int64 {
+	if m != nil && m.MsgId != nil {
+		return *m.MsgId
+	}
+	return 0
 }
 
-func (m *PushBatchReq) Reset()                    { *m = PushBatchReq{} }
-func (m *PushBatchReq) String() string            { return proto.CompactTextString(m) }
-func (*PushBatchReq) ProtoMessage()               {}
-func (*PushBatchReq) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
-
-func (m *PushBatchReq) GetPushBatchs() []*PushDataReq {
+func (m *DataRes) GetMsgData() []byte {
 	if m != nil {
-		return m.PushBatchs
+		return m.MsgData
 	}
 	return nil
 }
 
-type PushBatchRes struct {
-	Result           *ResultType `protobuf:"varint,2,req,name=result,enum=protol.ResultType" json:"result,omitempty"`
-	XXX_unrecognized []byte      `json:"-"`
+type DataResBatchs struct {
+	DataBatchs       []*DataRes `protobuf:"bytes,1,rep,name=data_batchs,json=dataBatchs" json:"data_batchs,omitempty"`
+	XXX_unrecognized []byte     `json:"-"`
 }
 
-func (m *PushBatchRes) Reset()                    { *m = PushBatchRes{} }
-func (m *PushBatchRes) String() string            { return proto.CompactTextString(m) }
-func (*PushBatchRes) ProtoMessage()               {}
-func (*PushBatchRes) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+func (m *DataResBatchs) Reset()                    { *m = DataResBatchs{} }
+func (m *DataResBatchs) String() string            { return proto.CompactTextString(m) }
+func (*DataResBatchs) ProtoMessage()               {}
+func (*DataResBatchs) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
 
-func (m *PushBatchRes) GetResult() ResultType {
-	if m != nil && m.Result != nil {
-		return *m.Result
+func (m *DataResBatchs) GetDataBatchs() []*DataRes {
+	if m != nil {
+		return m.DataBatchs
 	}
-	return ResultType_SUCCEED
+	return nil
 }
 
+// 外部调用rpc协议
 // 推送给设备的信息
 type PushDeviceReq struct {
-	Duid             *int64  `protobuf:"varint,1,req,name=duid" json:"duid,omitempty"`
-	MsgId            *int32  `protobuf:"varint,2,req,name=msg_id,json=msgId" json:"msg_id,omitempty"`
-	MsgData          *string `protobuf:"bytes,3,req,name=msg_data,json=msgData" json:"msg_data,omitempty"`
+	Duid             *string `protobuf:"bytes,1,req,name=duid" json:"duid,omitempty"`
+	MsgData          []byte  `protobuf:"bytes,2,req,name=msg_data,json=msgData" json:"msg_data,omitempty"`
+	ExpireTime       *int32  `protobuf:"varint,3,req,name=expire_time,json=expireTime" json:"expire_time,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
 func (m *PushDeviceReq) Reset()                    { *m = PushDeviceReq{} }
 func (m *PushDeviceReq) String() string            { return proto.CompactTextString(m) }
 func (*PushDeviceReq) ProtoMessage()               {}
-func (*PushDeviceReq) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
+func (*PushDeviceReq) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
 
-func (m *PushDeviceReq) GetDuid() int64 {
+func (m *PushDeviceReq) GetDuid() string {
 	if m != nil && m.Duid != nil {
 		return *m.Duid
-	}
-	return 0
-}
-
-func (m *PushDeviceReq) GetMsgId() int32 {
-	if m != nil && m.MsgId != nil {
-		return *m.MsgId
-	}
-	return 0
-}
-
-func (m *PushDeviceReq) GetMsgData() string {
-	if m != nil && m.MsgData != nil {
-		return *m.MsgData
 	}
 	return ""
 }
 
+func (m *PushDeviceReq) GetMsgData() []byte {
+	if m != nil {
+		return m.MsgData
+	}
+	return nil
+}
+
+func (m *PushDeviceReq) GetExpireTime() int32 {
+	if m != nil && m.ExpireTime != nil {
+		return *m.ExpireTime
+	}
+	return 0
+}
+
+// 返回的结果
 type PushDeviceRes struct {
-	Duid             *int64 `protobuf:"varint,1,req,name=duid" json:"duid,omitempty"`
-	MsgId            *int32 `protobuf:"varint,2,req,name=msg_id,json=msgId" json:"msg_id,omitempty"`
-	Result           *int32 `protobuf:"varint,3,req,name=result" json:"result,omitempty"`
-	XXX_unrecognized []byte `json:"-"`
+	Duid             *string `protobuf:"bytes,1,req,name=duid" json:"duid,omitempty"`
+	Result           *int32  `protobuf:"varint,2,req,name=result" json:"result,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
 }
 
 func (m *PushDeviceRes) Reset()                    { *m = PushDeviceRes{} }
 func (m *PushDeviceRes) String() string            { return proto.CompactTextString(m) }
 func (*PushDeviceRes) ProtoMessage()               {}
-func (*PushDeviceRes) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
+func (*PushDeviceRes) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
 
-func (m *PushDeviceRes) GetDuid() int64 {
+func (m *PushDeviceRes) GetDuid() string {
 	if m != nil && m.Duid != nil {
 		return *m.Duid
 	}
-	return 0
-}
-
-func (m *PushDeviceRes) GetMsgId() int32 {
-	if m != nil && m.MsgId != nil {
-		return *m.MsgId
-	}
-	return 0
+	return ""
 }
 
 func (m *PushDeviceRes) GetResult() int32 {
@@ -281,43 +284,83 @@ func (m *PushDeviceRes) GetResult() int32 {
 	return 0
 }
 
+// 批量推送设备的消息
+type PushDevBatchsReq struct {
+	Batchs           []*PushDeviceReq `protobuf:"bytes,1,rep,name=batchs" json:"batchs,omitempty"`
+	XXX_unrecognized []byte           `json:"-"`
+}
+
+func (m *PushDevBatchsReq) Reset()                    { *m = PushDevBatchsReq{} }
+func (m *PushDevBatchsReq) String() string            { return proto.CompactTextString(m) }
+func (*PushDevBatchsReq) ProtoMessage()               {}
+func (*PushDevBatchsReq) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
+
+func (m *PushDevBatchsReq) GetBatchs() []*PushDeviceReq {
+	if m != nil {
+		return m.Batchs
+	}
+	return nil
+}
+
+type PushDevBatchsRes struct {
+	BatchsResult     []*PushDeviceRes `protobuf:"bytes,1,rep,name=batchs_result,json=batchsResult" json:"batchs_result,omitempty"`
+	XXX_unrecognized []byte           `json:"-"`
+}
+
+func (m *PushDevBatchsRes) Reset()                    { *m = PushDevBatchsRes{} }
+func (m *PushDevBatchsRes) String() string            { return proto.CompactTextString(m) }
+func (*PushDevBatchsRes) ProtoMessage()               {}
+func (*PushDevBatchsRes) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
+
+func (m *PushDevBatchsRes) GetBatchsResult() []*PushDeviceRes {
+	if m != nil {
+		return m.BatchsResult
+	}
+	return nil
+}
+
 func init() {
-	proto.RegisterType((*DevOnline)(nil), "protol.DevOnline")
+	proto.RegisterType((*DevStat)(nil), "protol.DevStat")
 	proto.RegisterType((*DevOffline)(nil), "protol.DevOffline")
-	proto.RegisterType((*DevAlive)(nil), "protol.DevAlive")
-	proto.RegisterType((*PushDataReq)(nil), "protol.PushDataReq")
-	proto.RegisterType((*PushDataRes)(nil), "protol.PushDataRes")
-	proto.RegisterType((*PushBatchReq)(nil), "protol.PushBatchReq")
-	proto.RegisterType((*PushBatchRes)(nil), "protol.PushBatchRes")
+	proto.RegisterType((*DevOnline)(nil), "protol.DevOnline")
+	proto.RegisterType((*DevsAlive)(nil), "protol.DevsAlive")
+	proto.RegisterType((*DataOccur)(nil), "protol.DataOccur")
+	proto.RegisterType((*DataReq)(nil), "protol.DataReq")
+	proto.RegisterType((*DataRes)(nil), "protol.DataRes")
+	proto.RegisterType((*DataResBatchs)(nil), "protol.DataResBatchs")
 	proto.RegisterType((*PushDeviceReq)(nil), "protol.PushDeviceReq")
 	proto.RegisterType((*PushDeviceRes)(nil), "protol.PushDeviceRes")
-	proto.RegisterEnum("protol.ResultType", ResultType_name, ResultType_value)
+	proto.RegisterType((*PushDevBatchsReq)(nil), "protol.PushDevBatchsReq")
+	proto.RegisterType((*PushDevBatchsRes)(nil), "protol.PushDevBatchsRes")
 }
 
 func init() { proto.RegisterFile("ipc_push.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 338 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x94, 0x90, 0xcf, 0x4f, 0xea, 0x40,
-	0x10, 0x80, 0x1f, 0xf4, 0x51, 0x60, 0x8a, 0x84, 0x2c, 0xd1, 0xe0, 0x89, 0x66, 0x4f, 0x84, 0x03,
-	0x07, 0xe2, 0x45, 0x4f, 0x22, 0xc5, 0x84, 0xc4, 0x44, 0xb3, 0xc0, 0xd1, 0x34, 0xb5, 0x1d, 0x60,
-	0x93, 0xb6, 0x54, 0x76, 0xdb, 0xe8, 0x5f, 0xaf, 0xd9, 0x2d, 0x55, 0x9a, 0xc8, 0x81, 0x5e, 0xda,
-	0xce, 0x8f, 0x6f, 0x66, 0x3e, 0x68, 0xf3, 0xc4, 0x77, 0x93, 0x54, 0x6c, 0x47, 0xc9, 0x7e, 0x27,
-	0x77, 0xc4, 0xd4, 0xaf, 0x90, 0xf6, 0xa1, 0xe9, 0x60, 0xf6, 0x1c, 0x87, 0x3c, 0x46, 0x42, 0xe0,
-	0x7f, 0x90, 0xf2, 0xa0, 0x57, 0xb1, 0xab, 0x03, 0x83, 0xe9, 0x6f, 0x6a, 0x03, 0xa8, 0x82, 0xf5,
-	0xfa, 0x64, 0xc5, 0x3d, 0x34, 0x1c, 0xcc, 0x26, 0x21, 0xcf, 0x8e, 0xf3, 0x46, 0x91, 0x27, 0x36,
-	0xb4, 0x62, 0x94, 0xae, 0xe4, 0x11, 0xba, 0x02, 0xfd, 0x5e, 0xd5, 0xae, 0x0e, 0x6a, 0x0c, 0x62,
-	0x94, 0x4b, 0x1e, 0xe1, 0x02, 0x7d, 0xfa, 0x0a, 0xd6, 0x4b, 0x2a, 0xb6, 0x8e, 0x27, 0x3d, 0x86,
-	0xef, 0x7f, 0x0d, 0x21, 0xd7, 0xd0, 0x88, 0xc4, 0xc6, 0x0d, 0x3c, 0xe9, 0x69, 0x40, 0x93, 0xd5,
-	0x23, 0xb1, 0x51, 0x1d, 0xa4, 0x0f, 0x16, 0x7e, 0x24, 0x7c, 0x8f, 0x7a, 0x44, 0xcf, 0xc8, 0xf1,
-	0x79, 0x48, 0x4d, 0xa0, 0xb7, 0xc7, 0x78, 0x41, 0x86, 0x60, 0xee, 0x51, 0xa4, 0xa1, 0xd4, 0xa0,
-	0xf6, 0x98, 0xe4, 0x4a, 0xc2, 0x11, 0xd3, 0xd1, 0xe5, 0x67, 0x82, 0xec, 0x50, 0x41, 0x1d, 0x68,
-	0xa9, 0xd6, 0x07, 0x4f, 0xfa, 0x5b, 0xb5, 0xda, 0x0d, 0x58, 0x4a, 0xa2, 0xfb, 0xa6, 0x02, 0x42,
-	0x9f, 0x69, 0x8d, 0xbb, 0x05, 0xe0, 0xe8, 0x08, 0x06, 0x49, 0xd1, 0x27, 0xe8, 0x5d, 0x89, 0x72,
-	0xde, 0x06, 0x2b, 0xb8, 0xd0, 0x58, 0xcc, 0xb8, 0x8f, 0xa7, 0xec, 0x5c, 0x82, 0xa9, 0xec, 0xf0,
-	0xe0, 0x20, 0xb7, 0x16, 0x89, 0xcd, 0xbc, 0x2c, 0xcd, 0x28, 0x49, 0xa3, 0xac, 0x8c, 0x15, 0xe7,
-	0x60, 0xaf, 0x7e, 0xd6, 0xcf, 0x5d, 0x1f, 0xfe, 0x86, 0x23, 0x80, 0xdf, 0x03, 0x88, 0x05, 0xf5,
-	0xc5, 0x6a, 0x3a, 0x9d, 0xcd, 0x9c, 0xce, 0x3f, 0xd2, 0x05, 0xf3, 0x71, 0x32, 0x7f, 0x9a, 0x39,
-	0x9d, 0xaf, 0xe2, 0xa9, 0x7c, 0x07, 0x00, 0x00, 0xff, 0xff, 0x92, 0x6c, 0x41, 0x25, 0x94, 0x02,
+	// 386 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x84, 0x51, 0x4f, 0x8f, 0x93, 0x40,
+	0x14, 0xcf, 0x52, 0x4b, 0x97, 0x47, 0xab, 0x66, 0x92, 0x35, 0x98, 0x18, 0x97, 0xcc, 0x89, 0x8b,
+	0x8d, 0xf1, 0xe8, 0xc6, 0x98, 0x1a, 0x2e, 0x1e, 0xb4, 0x66, 0xd6, 0xab, 0x99, 0xcc, 0xc2, 0x6b,
+	0x3b, 0xc9, 0x40, 0x91, 0x19, 0x88, 0x1f, 0xdf, 0xcc, 0x30, 0x35, 0x62, 0xa9, 0x7b, 0x82, 0xf7,
+	0xf8, 0xfd, 0x7d, 0xc0, 0x53, 0xd9, 0x14, 0xbc, 0xe9, 0xf4, 0x61, 0xdd, 0xb4, 0x47, 0x73, 0x24,
+	0xa1, 0x7b, 0x28, 0xfa, 0x01, 0x16, 0x39, 0xf6, 0xf7, 0x46, 0x18, 0x42, 0xe0, 0x49, 0xd9, 0xc9,
+	0x32, 0xb9, 0x4a, 0x83, 0x2c, 0x62, 0xee, 0x9d, 0xbc, 0x86, 0x58, 0x09, 0x6d, 0x78, 0xa5, 0xf7,
+	0x5c, 0x96, 0x49, 0x90, 0x06, 0xd9, 0x8c, 0x45, 0x76, 0xf5, 0x45, 0xef, 0x3f, 0x97, 0x34, 0x05,
+	0xc8, 0xb1, 0xdf, 0xee, 0x76, 0x4a, 0xd6, 0x38, 0xa5, 0x40, 0x3f, 0x42, 0x64, 0x11, 0xf5, 0x25,
+	0xc0, 0xa3, 0x16, 0x3f, 0x9c, 0x80, 0xde, 0x28, 0xd9, 0x23, 0x59, 0x03, 0x94, 0xd8, 0xf3, 0xa3,
+	0x93, 0x4b, 0xae, 0xd2, 0x59, 0x16, 0xbf, 0x7b, 0x36, 0x54, 0x52, 0x6b, 0x5f, 0x84, 0x45, 0xe5,
+	0x1f, 0xc3, 0x14, 0x96, 0x35, 0x1a, 0x6e, 0x64, 0x85, 0x5c, 0x63, 0xe1, 0xd4, 0xe7, 0x0c, 0x6a,
+	0x34, 0xdf, 0x65, 0x85, 0xf7, 0x58, 0xd0, 0x5b, 0x88, 0x72, 0x61, 0xc4, 0xb6, 0x28, 0xba, 0x76,
+	0xb2, 0xc0, 0x1d, 0x2c, 0x2c, 0x80, 0xe1, 0xcf, 0xc9, 0xf8, 0xaf, 0x00, 0x94, 0xf8, 0x27, 0xfd,
+	0xb5, 0x12, 0x3e, 0xfc, 0xf6, 0x44, 0xd6, 0x93, 0xe4, 0x1b, 0x08, 0x47, 0xc4, 0x79, 0x65, 0x59,
+	0xe4, 0x25, 0x5c, 0xdb, 0x75, 0x29, 0x8c, 0x48, 0x66, 0x69, 0x90, 0x2d, 0xd9, 0xa2, 0xd2, 0x7b,
+	0x2b, 0x44, 0x37, 0xb0, 0xf2, 0x82, 0x9f, 0x84, 0x29, 0x0e, 0x9a, 0xbc, 0x85, 0xd8, 0xe2, 0xf8,
+	0x83, 0x1b, 0xcf, 0x4e, 0x32, 0x60, 0x19, 0x58, 0xcc, 0xc0, 0xa0, 0x1c, 0x56, 0xdf, 0x3a, 0x7d,
+	0xc8, 0xb1, 0x97, 0x05, 0x5e, 0xaa, 0xf5, 0x77, 0x84, 0x60, 0x14, 0x81, 0xdc, 0x42, 0x8c, 0xbf,
+	0x1a, 0xd9, 0xa2, 0x3b, 0xab, 0x0b, 0x38, 0x67, 0x30, 0xac, 0xec, 0x55, 0xe9, 0xdd, 0xd8, 0x60,
+	0xba, 0xfa, 0x0b, 0x08, 0x5b, 0xd4, 0x9d, 0x32, 0xfe, 0x9f, 0xf8, 0x89, 0x6e, 0xe0, 0xb9, 0x27,
+	0x0f, 0x71, 0x6d, 0xc0, 0x37, 0x10, 0x8e, 0xea, 0xdd, 0x9c, 0xea, 0x8d, 0x7a, 0x30, 0x0f, 0xa2,
+	0x5f, 0xcf, 0x24, 0x34, 0x79, 0x0f, 0xab, 0xe1, 0x2b, 0xf7, 0xae, 0xff, 0x51, 0xd2, 0x6c, 0xf9,
+	0x70, 0x22, 0x76, 0xca, 0xfc, 0x0e, 0x00, 0x00, 0xff, 0xff, 0x14, 0x29, 0x81, 0x03, 0x3c, 0x03,
 	0x00, 0x00,
 }

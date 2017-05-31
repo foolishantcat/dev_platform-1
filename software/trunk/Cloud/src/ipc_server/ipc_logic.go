@@ -6,13 +6,23 @@ import (
 	"sdk/net_server"
 	"sdk/redis_opt"
 	"sync"
+	"time"
 	"unsafe"
 
-	"github.com/golang/protobuf/proto"
+	//"github.com/golang/protobuf/proto"
+)
+
+var conf net_server.Config
+
+const (
+	RESULT_OK         = 0
+	OPT_DB_ERR        = -1
+	OPT_REDIS_ERR     = -2
+	DEVICE_NOT_IN_SVR = -3
 )
 
 type DataOpt struct {
-	conns_map map[int64]net_server.INetClient
+	conns_map map[string]net_server.INetClient
 	redis     *redis_opt.RedisOpt
 	opt_lock  *sync.Mutex
 }
@@ -21,85 +31,31 @@ type ServerLogic struct {
 	data_opt []DataOpt
 }
 
-func EventDevOnline(packet_buf []byte,
-	ser_obj *ServerLogic,
-	client net_server.INetClient,
-	contxt interface{}) {
-
-	var req protol.DevOnline
-
-	log_obj := logger.Instance()
-	err := proto.Unmarshal(packet_buf, &req)
-	if err != nil {
-		log_obj.LogAppErr("Pb Unmarshaled Failed!MessageName=DevOnline, ErrString=%s", err.Error())
-		client.Close()
-		return
-	}
-
-	duid := req.GetDuid()
-	index := duid % len(ser_obj.data_opt)
-	defer ser_obj.data_opt[index].opt_lock.Unlock()
-
-	ser_obj.data_opt[index].opt_lock.Unlock()
-	var msg_inf redis_opt.MsgInfo
-	var nums int
-
-	// 获取推送的信息
-	redis_opt := ser_obj.data_opt[index].redis
-	nums, err = redis_opt.GetDuidData(duid, &duid_inf)
-	if err != nil {
-		log_obj.LogAppErr("redis_opt GetDuidData Failed! ErrString=%s", err.Error())
-		return
-	}
-
-}
-
-func EventDevOffline(packet_buf []byte,
-	ser_obj *ServerLogic,
-	client net_server.INetClient,
-	contxt interface{}) {
-
-}
-
-func EventDevAlive(packet_buf []byte,
-	ser_obj *ServerLogic,
-	client net_server.INetClient,
-	contxt interface{}) {
-
-}
-
-func EvenPullData(packet_buf []byte,
-	ser_obj *ServerLogic,
-	client net_server.INetClient,
-	contxt interface{}) {
-
-}
-
-func EventPushData(packet_buf []byte,
-	ser_obj *ServerLogic,
-	client net_server.INetClient,
-	contxt interface{}) {
-
-}
-
 type event_func func(packet_buf []byte, ser_obj *ServerLogic, client net_server.INetClient, contxt interface{})
-var event_map map[string]event_func = {
-	"ipc.dev_offline":EventDevOffline,
-	"ipc.devs_online":EventDevOnline,
-	"ipc_pull_data":EventPushData,
+
+var event_map map[string]event_func = map[string]event_func{
+	"ipc.dev_offline": EventDevOffline,
+	"ipc.devs_online": EventDevOnline,
+	"ipc.devs_alive":  EventDevAlive,
+	"ipc.pull_data":   EventPullData,
+	"ipc.push_data":   EventPushData,
 }
 
 func ParseData(buf []byte) ([]byte, int) {
 
+
+	log_obj:= logger.Instance()
+	log_obj.LogAppDebug("Come in")
+
 	// 先收头部
-	if len(buf) >= unsafe.Sizeof(int32(0)) {
+	if len(buf) >= int(unsafe.Sizeof(int32(0))) {
 		var packet_len int
 
 		packet_len = (int)(*(*int32)(unsafe.Pointer(&buf[0])))
-		packet_len += unsafe.Sizeof(int32(0))
+		packet_len += int(unsafe.Sizeof(int32(0)))
 		if len(buf) >= packet_len { // 加上packet_len
 			packet_buf := make([]byte, 0, packet_len)
-			copy(pack_buf, buf, packet_len)
+			copy(packet_buf, buf)
 
 			return packet_buf, packet_len
 		}
@@ -119,10 +75,17 @@ func (this *ServerLogic) OnNetRecv(client net_server.INetClient, packet_buf []by
 	// 开始进行解包
 	data, msg_name, ok := protol.Unpack(packet_buf)
 	if !ok {
-		log_obj.LogAppErr("UnPacket Failed!PeerAddr=%s", client.GetPeerAddr())
+		log_obj.LogAppError("UnPacket Failed!PeerAddr=%s", client.GetPeerAddr())
 		// 断开连接
 		client.Close()
 	}
+
+	event_func, ok := event_map[msg_name]
+	if !ok {
+		log_obj.LogAppWarn("Not Find Method!MsgName=%s", msg_name)
+		return
+	}
+	event_func(data, this, client, contxt)
 }
 
 func (this *ServerLogic) OnNetErr(client net_server.INetClient, contxt interface{}) {
@@ -130,40 +93,48 @@ func (this *ServerLogic) OnNetErr(client net_server.INetClient, contxt interface
 }
 
 func (this *ServerLogic) Initialize() {
-	var conf net_server.Config
-	log_obj := logger.Instance()
 
-	if !conf.LoadFile("../conf/server.json") {
-		log_obj.Printf("Load Config File Failed!")
-		return
-	}
+	log_obj := logger.Instance()
 
 	// 初始化相关的环境操作
 	size := 8
-	this.data_opt = make([]data_opt, size)
-	redis_address := "127.0.0.1"
+	this.data_opt = make([]DataOpt, size)
+	redis_address := "127.0.0.1:12306"
 
 	for i := 0; i < len(this.data_opt); i++ {
-		redis = redis_opt.CreateRedisOpt(redis_address)
-		if redis != nil {
-			logger.LogAppErr("Redis Init Failed!")
+		redis := redis_opt.CreateRedisOpt(redis_address, 10)
+		if redis == nil {
+			log_obj.LogAppError("Redis Init Failed!")
 			return
 		}
 
-		this.data_opt[i].conns_map = make(map[uint64]net_server.INetClient)
+		this.data_opt[i].conns_map = make(map[string]net_server.INetClient)
 		this.data_opt[i].opt_lock = &sync.Mutex{}
 		this.data_opt[i].redis = redis
 	}
 
-	ipc_server_obj := net_server.CreateNetServer(&conf)
+	if !conf.LoadFile("./conf/server.ini"){
+	log_obj.LogAppError("Load File Failed!")
+	return		
+	}
+	ipc_server_obj := net_server.CreateNetServer(this)
 	if !ipc_server_obj.Start(&conf) {
-		logger.LogAppErr("ipc_server Start Failed!")
+		log_obj.LogAppError("ipc_server Start Failed!")
 		return
 	}
 
 	for {
-		time.Sleep(time.Now().Second() + 10*time.Second)
+		time.Sleep(10 * time.Second)
 		// 不做任何处理
 	}
+}
 
+func (this ServerLogic) GetValidOpt(duid string) *DataOpt {
+	data_buf := []byte(duid)
+	hash_key := 0
+	for _, value := range data_buf {
+		hash_key += int(value)
+	}
+	index := hash_key % len(this.data_opt)
+	return &this.data_opt[index]
 }

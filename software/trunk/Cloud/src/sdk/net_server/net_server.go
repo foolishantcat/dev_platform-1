@@ -1,8 +1,8 @@
 package net_server
 
 import (
-	"sdk/logger"
 	"net"
+	"sdk/logger"
 	"time"
 )
 
