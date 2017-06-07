@@ -2,9 +2,9 @@ package main
 
 import (
 	"protol"
+	"sdk/comm_func"
 	"sdk/logger"
 	"sdk/net_server"
-	"sdk/redis_opt"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -34,8 +34,10 @@ func EventDevOnline(packet_buf []byte,
 	last_msg_id := req.GetLastMsgId()
 	data_opt := ser_obj.GetValidOpt(duid)
 
-	var duid_inf redis_opt.DuidInfo
-	var msg_datas []redis_opt.MsgInfo
+	var duid_inf DuidInfo
+	var msg_datas []MsgInfo
+
+	log_obj.LogAppInfo("OnLine Inf!Duid=%s,MsgId=%d", duid, last_msg_id)
 
 	duid_inf.Ipc_server = conf.GetBinderAddr()
 	duid_inf.Port = conf.GetBinderPort()
@@ -68,7 +70,7 @@ func EventDevOnline(packet_buf []byte,
 		for _, value := range msg_datas {
 			var data protol.DataRes
 
-			data.Duid = proto.String(duid)
+			data.FromDuid = proto.String(duid)
 			data.MsgData = value.Msg_data[:]
 			data.MsgId = proto.Int64(value.Msg_id)
 
@@ -124,7 +126,7 @@ func EventDevAlive(packet_buf []byte,
 
 	var req protol.DevsAlive
 	var res_batchs protol.DataResBatchs // 应答推送的消息
-	var msg_array []redis_opt.MsgInfo
+	var msg_array []MsgInfo
 
 	res_batchs.DataBatchs = make([]*protol.DataRes, 0)
 	log_obj := logger.Instance()
@@ -146,7 +148,7 @@ func EventDevAlive(packet_buf []byte,
 		data_opt := ser_obj.GetValidOpt(duid)
 		redis := data_opt.redis
 
-		var duid_inf redis_opt.DuidInfo
+		var duid_inf DuidInfo
 		duid_inf.Ipc_server = conf.GetBinderAddr()
 		duid_inf.Port = conf.GetBinderPort()
 
@@ -179,7 +181,7 @@ func EventDevAlive(packet_buf []byte,
 			// 构造消息进行推送
 			var data_res protol.DataRes
 
-			data_res.Duid = proto.String(duid)
+			data_res.FromDuid = proto.String(duid)
 			data_res.MsgId = proto.Int64(value.Msg_id)
 			data_res.MsgData = value.Msg_data[:]
 
@@ -206,7 +208,7 @@ func EventPullData(packet_buf []byte,
 	contxt interface{}) {
 
 	var req protol.DataReq
-	var msg_array []redis_opt.MsgInfo
+	var msg_array []MsgInfo
 	log_obj := logger.Instance()
 
 	err := proto.Unmarshal(packet_buf, &req)
@@ -236,7 +238,7 @@ func EventPullData(packet_buf []byte,
 		for index, value := range msg_array {
 			var data_res protol.DataRes
 
-			data_res.Duid = proto.String(duid)
+			data_res.FromDuid = proto.String(duid)
 			data_res.MsgId = proto.Int64(value.Msg_id)
 			data_res.MsgData = value.Msg_data[:]
 
@@ -268,43 +270,45 @@ func EventPushData(packet_buf []byte,
 	}
 
 	// 存入到redis中
-	duid := req.GetDuid()
-	data_opt := ser_obj.GetValidOpt(duid)
+	from_duid := req.GetFromDuid()
+	to_duid := req.GetToDuid()
+	data_opt := ser_obj.GetValidOpt(to_duid)
 	redis := data_opt.redis
-	res.Duid = proto.String(duid)
 	res.Result = proto.Int32(RESULT_OK)
 	{
 		data_opt.opt_lock.Lock()
 		defer data_opt.opt_lock.Unlock()
 
-		// 存入到db
-
 		//  存入到redis
-		var msg_inf redis_opt.MsgInfo
+		var msg_inf MsgInfo
 
 		msg_inf.Last_time_stamp = req.GetExpireTime() + int32(time.Now().Unix())
+		msg_inf.From_duid = from_duid
 		copy(msg_inf.Msg_data[:], req.GetMsgData())
-		msg_inf.Msg_id = 1 // 获取消息MsdId
+		msg_inf.Msg_id = comm_func.CreateMsgId() // 获取消息MsdId
 
-		if err := redis.AddPushMsg(duid, &msg_inf, key_expire_time); err != nil {
-			log_obj.LogAppError("Add Push-Msg Failed!Duid=%s,ErrString=%s", duid, err.Error())
+		if err := redis.AddPushMsg(to_duid, &msg_inf, key_expire_time); err != nil {
+			log_obj.LogAppError("Add Push-Msg Failed!ToDuid=%s,FromDuid=%s,ErrString=%s",
+				to_duid,
+				from_duid,
+				err.Error())
 			res.Result = proto.Int32(OPT_REDIS_ERR)
 		}
 
 		// 能否找到对应推送客户端
-		push_client, ok = data_opt.conns_map[duid]
+		push_client, ok = data_opt.conns_map[to_duid]
 	}
 
 	if !ok {
 		// 没有找到记录下来，但是不在继续推送了，后续需要优化
-		log_obj.LogAppWarn("Cann't Find PushClient In Server!Duid=%s", duid)
+		log_obj.LogAppWarn("Cann't Find PushClient In Server!ToDuid=%s", to_duid)
 		res.Result = proto.Int32(DEVICE_NOT_IN_SVR)
 	} else {
 
 		// 推送设备
 		var data_occur protol.DataOccur
 
-		data_occur.Duid = proto.String(duid)
+		data_occur.Duid = proto.String(to_duid)
 		proto_buf, _ := proto.Marshal(&data_occur)
 		data_buf := protol.Pack(proto_buf, "ipc.data_occur")
 		push_client.Send(data_buf)

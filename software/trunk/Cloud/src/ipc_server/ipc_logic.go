@@ -1,14 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"protol"
 	"sdk/logger"
 	"sdk/net_server"
-	"sdk/redis_opt"
 	"sync"
 	"time"
 	"unsafe"
 
+	"github.com/larspensjo/config"
 	//"github.com/golang/protobuf/proto"
 )
 
@@ -23,12 +24,13 @@ const (
 
 type DataOpt struct {
 	conns_map map[string]net_server.INetClient
-	redis     *redis_opt.RedisOpt
+	redis     *RedisOpt
 	opt_lock  *sync.Mutex
 }
 
 type ServerLogic struct {
 	data_opt []DataOpt
+	db_opt   *DbOpt // 连接池，所以定义全局
 }
 
 type event_func func(packet_buf []byte, ser_obj *ServerLogic, client net_server.INetClient, contxt interface{})
@@ -43,18 +45,18 @@ var event_map map[string]event_func = map[string]event_func{
 
 func ParseData(buf []byte) ([]byte, int) {
 
-
-	log_obj:= logger.Instance()
+	log_obj := logger.Instance()
 	log_obj.LogAppDebug("Come in")
 
 	// 先收头部
-	if len(buf) >= int(unsafe.Sizeof(int32(0))) {
+	if len(buf) >= int(unsafe.Sizeof(int16(0))) {
 		var packet_len int
+		fmt.Println(buf)
 
-		packet_len = (int)(*(*int32)(unsafe.Pointer(&buf[0])))
-		packet_len += int(unsafe.Sizeof(int32(0)))
+		packet_len = (int)(*(*int16)(unsafe.Pointer(&buf[0])))
+		packet_len += int(unsafe.Sizeof(int16(0)))
 		if len(buf) >= packet_len { // 加上packet_len
-			packet_buf := make([]byte, 0, packet_len)
+			packet_buf := make([]byte, packet_len)
 			copy(packet_buf, buf)
 
 			return packet_buf, packet_len
@@ -99,10 +101,78 @@ func (this *ServerLogic) Initialize() {
 	// 初始化相关的环境操作
 	size := 8
 	this.data_opt = make([]DataOpt, size)
-	redis_address := "127.0.0.1:12306"
+
+	ini_conf, err := config.ReadDefault("./conf/server.ini")
+	if err != nil {
+		log_obj.LogAppError("Load Config Failed!ErrString=%s", err.Error())
+		return
+	}
+
+	// 获取db配置信息
+	// db_address string, login_name string, password string, db_name string
+	if !ini_conf.HasOption("db", "dns") {
+		log_obj.LogAppError("Has No [db.dns] Section!")
+		return
+	}
+	db_address, _ := ini_conf.String("db", "dns")
+
+	if !ini_conf.HasOption("db", "port") {
+		log_obj.LogAppError("Has No [db.port] Section!")
+		return
+	}
+	db_port, _ := ini_conf.String("db", "port")
+
+	db_address += ":"
+	db_address += db_port
+
+	if !ini_conf.HasOption("db", "username") {
+		log_obj.LogAppError("Has No [db.username] Section!")
+		return
+	}
+	user_name, _ := ini_conf.String("db", "username")
+
+	if !ini_conf.HasOption("db", "password") {
+		log_obj.LogAppError("Has No [db.password] Section!")
+		return
+	}
+	password, _ := ini_conf.String("db", "password")
+
+	if !ini_conf.HasOption("db", "dbname") {
+		log_obj.LogAppError("Has No [db.dbname] Section!")
+		return
+	}
+	db_name, _ := ini_conf.String("db", "dbname")
+
+	this.db_opt, err = CreateDbObj(db_address, user_name, password, db_name)
+	if err != nil {
+		log_obj.LogAppError("Create DbObj Failed!ErrString=%s", err.Error())
+		return
+	}
+
+	// 获取redis配置信息
+	if !ini_conf.HasOption("redis", "host") {
+		log_obj.LogAppError("Has No [redis.host] Section!")
+		return
+	}
+	redis_address, _ := ini_conf.String("redis", "host")
+
+	if !ini_conf.HasOption("redis", "port") {
+		log_obj.LogAppError("Has No [redis.port] Section!")
+		return
+	}
+	port, _ := ini_conf.String("redis", "port")
+
+	if !ini_conf.HasOption("redis", "opt_time") {
+		log_obj.LogAppError("Has No [redis.opt_time] Section!")
+		return
+	}
+	opt_time, _ := ini_conf.Int("redis", "opt_time")
+
+	redis_address += ":"
+	redis_address += port
 
 	for i := 0; i < len(this.data_opt); i++ {
-		redis := redis_opt.CreateRedisOpt(redis_address, 10)
+		redis := CreateRedisOpt(redis_address, opt_time)
 		if redis == nil {
 			log_obj.LogAppError("Redis Init Failed!")
 			return
@@ -113,9 +183,9 @@ func (this *ServerLogic) Initialize() {
 		this.data_opt[i].redis = redis
 	}
 
-	if !conf.LoadFile("./conf/server.ini"){
-	log_obj.LogAppError("Load File Failed!")
-	return		
+	if !conf.LoadFile("./conf/server.ini") {
+		log_obj.LogAppError("Load File Failed!")
+		return
 	}
 	ipc_server_obj := net_server.CreateNetServer(this)
 	if !ipc_server_obj.Start(&conf) {

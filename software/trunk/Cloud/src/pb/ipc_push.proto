@@ -1,17 +1,22 @@
 package protol;
 
 message DevStat{
-  required string duid = 1;
+  	required string duid = 1;
     required int64 last_msg_id=2;
 }
 
 message DevOffline{
-  required string duid = 1;
+	required string duid = 1;
 }
 
-message DevsOnline{
-  repeated DevStat dev_online = 1;
-  required int32 net_time_sec = 2;
+message DevOnline{
+	required string duid = 1;
+	required int64 last_msg_id = 2;
+}
+
+message DevsAlive{
+  	repeated DevStat dev_online = 1;
+  	required int32 net_time_sec = 2;
 }
 
 message DataOccur{
@@ -24,7 +29,7 @@ message DataReq{
 }
 
 message DataRes{
-   	required string duid=1;
+   	required string from_duid=1;
    	required int64 msg_id=2;
    	required bytes msg_data=3;
 }
@@ -33,20 +38,27 @@ message DataResBatchs{
    	repeated DataRes data_batchs=1;
 }
 
-
 // 外部调用rpc协议
 // 推送给设备的信息
 message PushDeviceReq{
-  	required string duid = 1;
-  	required bytes msg_data = 2;
-	required int32 expire_time=3;
+	required string from_duid=1;
+  	required string to_duid = 2;
+  	required bytes msg_data = 3;
+	required int32 expire_time=4;
+	optional int32 req_id = 5; // 用来回传,便于异步操作
+}
+
+// 返回的结果
+message PushDeviceRes{
+	required int32 result = 1;
+	optional int32 req_id = 2;
 }
 
 // 批量推送设备的消息
-message PushBatchsReq{
+message PushDevBatchsReq{
   	repeated PushDeviceReq batchs = 1;
 }
 
-message PushBatchsRes{
-  	required int32 result = 1;
+message PushDevBatchsRes{
+  	repeated PushDeviceRes batchs_result = 1;
 }
