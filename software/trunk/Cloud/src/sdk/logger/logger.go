@@ -3,12 +3,11 @@ package logger
 import (
 	"encoding/xml"
 	"fmt"
+	"log"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
-	//	"syscall"
-	//"syscall"
 	"time"
 )
 
@@ -416,120 +415,129 @@ type logtask struct {
 }
 
 type filelogger struct {
-	file           *os.File
-	file_lock      *os.File
+	//file_lock      *os.File
 	strFileDir     string
 	strFileName    string
 	nMaxRollupNums int
 	nMaxFileSize   int
 	nLogLevel      int
-	LogChannel     chan *logtask
-	StopChannel    chan int
 }
 
 func (this *filelogger) dupFile() {
+	var file_name string
+	var new_file_path string
+	var old_file_path string
 
-	// 查看当前文件数量
-	file_nums := this.checkLogFiles()
-	for i := file_nums; i > 0; i-- {
-		new_file_path := fmt.Sprintf("%s/%s.%d", this.strFileDir, this.strFileName, i)
-		old_file_path := fmt.Sprintf("%s/%s.%d", this.strFileDir, this.strFileName, i-1)
-		if i == 1 {
-			old_file_path = fmt.Sprintf("%s/%s", this.strFileDir, this.strFileName)
-		}
+	// 先保存为tmp文件
+	new_file_path = fmt.Sprintf("%s/%s.tmp", this.strFileDir, this.strFileName)
+	old_file_path = fmt.Sprintf("%s/%s", this.strFileDir, this.strFileName)
+
+	err := os.Rename(old_file_path, new_file_path)
+	if err != nil {
+		fmt.Printf("Rename Failed!OldFilePath=%s,NewFilePath=%s,ErrString=%s",
+			old_file_path,
+			new_file_path,
+			err.Error())
+
+		return
+	}
+
+	if this.nMaxRollupNums > 0 {
+		// 删除最久的文件
+		file_name = fmt.Sprintf("%s/%s.%d",
+			this.strFileDir,
+			this.strFileName,
+			this.nMaxRollupNums)
+
+		fmt.Printf("RmoveFile=%s\n", file_name)
+
+		os.Remove(file_name)
+	}
+
+	for i := this.nMaxRollupNums; i > 0; i-- {
+
+		new_file_path = fmt.Sprintf("%s/%s.%d", this.strFileDir, this.strFileName, i)
+		old_file_path = fmt.Sprintf("%s/%s.%d", this.strFileDir, this.strFileName, i-1)
+		fmt.Printf("NewFile=%s,OldFile=%s\n", new_file_path, old_file_path)
 		os.Rename(old_file_path, new_file_path)
 	}
 
-	if file_nums >= (this.nMaxRollupNums + 1) {
-		old_file_path := fmt.Sprintf("%s/%s.%d", this.strFileDir, this.strFileName, file_nums)
-		new_file_path := fmt.Sprintf("%s/%s", this.strFileDir, this.strFileName)
-		os.Rename(old_file_path, new_file_path)
-	}
-
-	new_file_path := fmt.Sprintf("%s/%s", this.strFileDir, this.strFileName)
-	this.file.Close()
-	this.file, _ = os.OpenFile(new_file_path, os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0744)
-
-	return
+	new_file_path = fmt.Sprintf("%s/%s.0", this.strFileDir, this.strFileName)
+	old_file_path = fmt.Sprintf("%s/%s.tmp", this.strFileDir, this.strFileName)
+	os.Rename(old_file_path, new_file_path)
 }
 
 func (this filelogger) checkLogFiles() int {
 	var i int
-	for i = 0; i <= this.nMaxRollupNums; i++ {
+	for i = 0; i < this.nMaxRollupNums; i++ {
 		file_full_path := fmt.Sprintf("%s/%s.%d", this.strFileDir, this.strFileName, i)
-		if i == 0 {
-			file_full_path = fmt.Sprintf("%s/%s", this.strFileDir, this.strFileName)
-		}
 		_, err := os.Stat(file_full_path)
 		if err != nil {
 			break
 		}
+
+		log.Printf("has file_path=%s", file_full_path)
 	}
 
-	return i
-}
-
-func (this *filelogger) doWrite(log_data []byte) {
-	defer unlock(this.file_lock)
-
-	lock(this.file_lock)
-
-	// 打开文件,写入数据
-	this.file.Write(log_data)
-	//this.file.Sync()
-	file_size, _ := this.file.Seek(0, os.SEEK_END)
-	if file_size < int64(this.nMaxFileSize) {
-		return
-	}
-
-	// 超过文件最大限制
-	this.dupFile()
-}
-
-func (this *filelogger) DoLog(Logv chan *logtask) {
-	defer this.file.Close()
-	defer this.file_lock.Close()
-	defer close(Logv)
-
-	for {
-		LogTask := <-Logv
-
-		// 写入数据
-		if LogTask.nLogType == LOG_TYPE {
-			if LogTask.nLogLevel <= this.nLogLevel {
-				this.doWrite(LogTask.LogData)
-			}
-		} else if LogTask.nLogType == EXIT_TYPE {
-			// 收到退出信号
-			break
-		}
-	}
-
-	//此时操作写完所有的数据
-	for {
-		select {
-		case LogTask := <-Logv:
-			this.doWrite(LogTask.LogData)
-		default: // 通道已经空,输出“退出”信号
-			this.StopChannel <- 1
-			return
-		}
-	}
-
+	return i + 1
 }
 
 func (this *filelogger) LogData(nLogLevel int, strLogPrex string, strFormat string, args ...interface{}) {
-	var Task logtask
+
+	// 首先判断文件的大小
+	var dir_name string
+	var file *os.File
+	var size int
+
+	for i := 0; i < len(this.strFileDir); i++ {
+		if this.strFileDir[i] == '/' {
+			// 判断文件夹是否存在
+			file_inf, err := os.Stat(dir_name)
+			if err != nil {
+				// 文件夹不存在,创建之
+				os.Mkdir(dir_name, os.ModeDir|0744)
+				log.Fatal("Create Dir Failed!")
+				return
+			}
+
+			if !file_inf.IsDir() {
+				// 存在同名文件,直接返回
+				log.Fatal("File Exist!Path=", dir_name)
+				return
+			}
+		}
+		dir_name += this.strFileDir[i : i+1]
+	}
+
+	file_path := fmt.Sprintf("%s/%s", this.strFileDir, this.strFileName)
+	file_inf, err := os.Stat(file_path)
+	if err != nil { // 不存在该文件
+		size = 0
+
+	} else {
+		size = int(file_inf.Size())
+	}
+
+	if size > this.nMaxFileSize {
+
+		fmt.Printf("SeekSize=%d\n", size)
+
+		// 关闭文件
+		this.dupFile()
+
+	}
+	file, err = os.OpenFile(file_path, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0744)
+	if err != nil {
+		log.Fatal("OpenFile Failed!ErrString=%s", err.Error())
+	}
 
 	strLogPrex += "|"
 	strLogData := fmt.Sprintf(strFormat, args...)
 	strLogData = strLogPrex + strLogData
 	strLogData += "\r\n"
-	Task.LogData = []byte(strLogData)
-	Task.nLogLevel = nLogLevel
-	Task.nLogType = LOG_TYPE
 
-	this.LogChannel <- &Task
+	file.WriteString(strLogData)
+	file.Close()
 
 }
 
@@ -555,54 +563,26 @@ func createFilelogger(strFilePath string,
 
 	}(strFilePath)
 
-	// 创建文件锁，用来互斥操作日志文件
-	file_lock_path := fmt.Sprintf("%s/.lock", strDir)
-	file_lock, _ := os.OpenFile(file_lock_path, os.O_CREATE|os.O_RDWR, 0644)
-
-	lock(file_lock)
+	// 创建文件锁
+	/*
+		lock_file_path := fmt.Sprintf("%s/.%s.lock", strDir, strFileName)
+		file_lock, err := os.OpenFile(lock_file_path, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0744)
+		if err != nil {
+			return nil, err
+		}
+	*/
 
 	// 创建加锁
-	ptrFile, Err := os.OpenFile(strFilePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0744)
-	if Err != nil {
-		unlock(file_lock)
-		file_lock.Close()
-
-		return nil, Err
-	}
-
-	unlock(file_lock)
-
-	ptrFileLogger := &filelogger{ptrFile,
-		file_lock,
-		strDir,
+	ptrFileLogger := &filelogger{strDir,
 		strFileName,
 		nMaxRollupNums,
 		nMaxFileSize,
-		nLogLevel,
-		make(chan *logtask, 1024),
-		make(chan int, 1)}
-
-	go ptrFileLogger.DoLog(ptrFileLogger.LogChannel)
+		nLogLevel}
 
 	return ptrFileLogger, nil
 }
 
 func (this *filelogger) Destory() {
-	var task logtask
-
-	task.nLogType = EXIT_TYPE
-	task.nLogLevel = 0
-	this.LogChannel <- &task
-	<-this.StopChannel
 }
 
-func lock(file_lock *os.File) {
-	fd := file_lock.Fd()
-	syscall.Syscall(syscall.SYS_FLOCK, 2, uintptr(fd), syscall.LOCK_EX)
-
-}
-
-func unlock(file_lock *os.File) {
-	fd := file_lock.Fd()
-	syscall.Syscall(syscall.SYS_FLOCK, 2, uintptr(fd), syscall.LOCK_UN)
-}
+//var mux sync.Mute

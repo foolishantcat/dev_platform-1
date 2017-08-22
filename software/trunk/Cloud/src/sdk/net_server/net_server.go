@@ -69,6 +69,13 @@ func (this *netServer) Start(config *Config) bool {
 	netAddr += ":"
 	netAddr += this.port
 
+	this.logger.LogSysInfo("Server Config Data!BindAddress=%s,TimeOut=%d,MaxPacketNums=%d,MaxPacketSize=%d,MaxAccpetNums=%d",
+		netAddr,
+		this.client_conf.alram_time,
+		this.client_conf.max_out_packet_nums,
+		this.client_conf.max_packet_size,
+		this.max_accpet_nums)
+
 	listen, err := net.Listen("tcp4", netAddr)
 	if err != nil {
 		this.logger.LogSysFatal("BindIP=%s,Port=%sErrString=%s",

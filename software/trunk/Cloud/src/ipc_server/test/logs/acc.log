@@ -1,0 +1,33 @@
+2017-08-13 21:56:54.180|INFO|ACC|conns_stub.go:128|sdk/stub.(*ConnsStub).waitRes()|waitRes Failed!Host=127.0.0.1:10001,ErrString=EOF
+2017-08-13 21:56:54.180|INFO|ACC|conns_stub.go:173|sdk/stub.(*ConnsStub).Invoke()|waitRes Failed!Host=127.0.0.1:10001,ErrString=EOF
+2017-08-13 22:00:56.685|INFO|ACC|conns_stub.go:128|sdk/stub.(*ConnsStub).waitRes()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:33590->127.0.0.1:10001: i/o timeout
+2017-08-13 22:00:56.685|INFO|ACC|conns_stub.go:173|sdk/stub.(*ConnsStub).Invoke()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:33590->127.0.0.1:10001: i/o timeout
+2017-08-13 22:05:54.062|INFO|ACC|conns_stub.go:128|sdk/stub.(*ConnsStub).waitRes()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:33596->127.0.0.1:10001: i/o timeout
+2017-08-13 22:05:54.062|INFO|ACC|conns_stub.go:173|sdk/stub.(*ConnsStub).Invoke()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:33596->127.0.0.1:10001: i/o timeout
+2017-08-13 22:17:25.117|INFO|ACC|conns_stub.go:128|sdk/stub.(*ConnsStub).waitRes()|waitRes Failed!Host=127.0.0.1:10001,ErrString=EOF
+2017-08-13 22:17:25.117|INFO|ACC|conns_stub.go:173|sdk/stub.(*ConnsStub).Invoke()|waitRes Failed!Host=127.0.0.1:10001,ErrString=EOF
+2017-08-21 21:36:28.291|INFO|ACC|conns_stub.go:128|sdk/stub.(*ConnsStub).waitRes()|waitRes Failed!Host=127.0.0.1:10001,ErrString=EOF
+2017-08-21 21:36:28.291|INFO|ACC|conns_stub.go:173|sdk/stub.(*ConnsStub).Invoke()|waitRes Failed!Host=127.0.0.1:10001,ErrString=EOF
+2017-08-21 21:41:49.192|INFO|ACC|conns_stub.go:128|sdk/stub.(*ConnsStub).waitRes()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:43136->127.0.0.1:10001: i/o timeout
+2017-08-21 21:41:49.192|INFO|ACC|conns_stub.go:173|sdk/stub.(*ConnsStub).Invoke()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:43136->127.0.0.1:10001: i/o timeout
+2017-08-21 22:06:58.224|INFO|ACC|conns_stub.go:128|sdk/stub.(*ConnsStub).waitRes()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:45146->127.0.0.1:10001: i/o timeout
+2017-08-21 22:06:58.224|INFO|ACC|conns_stub.go:173|sdk/stub.(*ConnsStub).Invoke()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:45146->127.0.0.1:10001: i/o timeout
+2017-08-21 23:08:19.615|INFO|ACC|conns_stub.go:207|sdk/stub.(*ConnsStub).tryConnect()|Connect Failed!Host=127.0.0.1:10001,ErrString=dial tcp 127.0.0.1:10001: getsockopt: connection refused
+2017-08-21 23:08:19.615|INFO|ACC|conns_stub.go:78|sdk/stub.(*ConnsStub).invokeReq()|Try Connect Failed !Host=127.0.0.1:10001,ErrString=dial tcp 127.0.0.1:10001: getsockopt: connection refused
+2017-08-21 23:08:19.615|INFO|ACC|conns_stub.go:166|sdk/stub.(*ConnsStub).Invoke()|inovkeReq Failed!Host=127.0.0.1:10001,ErrString=dial tcp 127.0.0.1:10001: getsockopt: connection refused
+2017-08-21 23:14:52.786|INFO|ACC|conns_stub.go:207|sdk/stub.(*ConnsStub).tryConnect()|Connect Failed!Host=127.0.0.1:10001,ErrString=dial tcp 127.0.0.1:10001: getsockopt: connection refused
+2017-08-21 23:14:52.786|INFO|ACC|conns_stub.go:78|sdk/stub.(*ConnsStub).invokeReq()|Try Connect Failed !Host=127.0.0.1:10001,ErrString=dial tcp 127.0.0.1:10001: getsockopt: connection refused
+2017-08-21 23:14:52.786|INFO|ACC|conns_stub.go:166|sdk/stub.(*ConnsStub).Invoke()|inovkeReq Failed!Host=127.0.0.1:10001,ErrString=dial tcp 127.0.0.1:10001: getsockopt: connection refused
+2017-08-21 23:32:56.907|INFO|ACC|conns_stub.go:128|sdk/stub.(*ConnsStub).waitRes()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:32974->127.0.0.1:10001: i/o timeout
+2017-08-21 23:32:56.907|INFO|ACC|conns_stub.go:173|sdk/stub.(*ConnsStub).Invoke()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:32974->127.0.0.1:10001: i/o timeout
+2017-08-21 23:57:38.262|INFO|ACC|conns_stub.go:207|sdk/stub.(*ConnsStub).tryConnect()|Connect Failed!Host=127.0.0.1:10001,ErrString=dial tcp 127.0.0.1:10001: getsockopt: connection refused
+2017-08-21 23:57:38.262|INFO|ACC|conns_stub.go:78|sdk/stub.(*ConnsStub).invokeReq()|Try Connect Failed !Host=127.0.0.1:10001,ErrString=dial tcp 127.0.0.1:10001: getsockopt: connection refused
+2017-08-21 23:57:38.262|INFO|ACC|conns_stub.go:166|sdk/stub.(*ConnsStub).Invoke()|inovkeReq Failed!Host=127.0.0.1:10001,ErrString=dial tcp 127.0.0.1:10001: getsockopt: connection refused
+2017-08-21 23:58:50.889|INFO|ACC|conns_stub.go:128|sdk/stub.(*ConnsStub).waitRes()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:39038->127.0.0.1:10001: i/o timeout
+2017-08-21 23:58:50.889|INFO|ACC|conns_stub.go:173|sdk/stub.(*ConnsStub).Invoke()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:39038->127.0.0.1:10001: i/o timeout
+2017-08-22 00:03:23.081|INFO|ACC|conns_stub.go:128|sdk/stub.(*ConnsStub).waitRes()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:39046->127.0.0.1:10001: i/o timeout
+2017-08-22 00:03:23.081|INFO|ACC|conns_stub.go:173|sdk/stub.(*ConnsStub).Invoke()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:39046->127.0.0.1:10001: i/o timeout
+2017-08-22 16:39:22.617|INFO|ACC|conns_stub.go:128|sdk/stub.(*ConnsStub).waitRes()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:39392->127.0.0.1:10001: i/o timeout
+2017-08-22 16:39:22.617|INFO|ACC|conns_stub.go:173|sdk/stub.(*ConnsStub).Invoke()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:39392->127.0.0.1:10001: i/o timeout
+2017-08-22 16:44:41.247|INFO|ACC|conns_stub.go:128|sdk/stub.(*ConnsStub).waitRes()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:39404->127.0.0.1:10001: i/o timeout
+2017-08-22 16:44:41.248|INFO|ACC|conns_stub.go:173|sdk/stub.(*ConnsStub).Invoke()|waitRes Failed!Host=127.0.0.1:10001,ErrString=read tcp 127.0.0.1:39404->127.0.0.1:10001: i/o timeout

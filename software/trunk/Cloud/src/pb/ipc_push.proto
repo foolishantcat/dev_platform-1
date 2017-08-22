@@ -1,16 +1,16 @@
 package protol;
 
 message DevStat{
-  	required string duid = 1;
+  	required int64 duid = 1;
     required int64 last_msg_id=2;
 }
 
 message DevOffline{
-	required string duid = 1;
+	required int64 duid = 1;
 }
 
 message DevOnline{
-	required string duid = 1;
+	required int64 duid = 1;
 	required int64 last_msg_id = 2;
 }
 
@@ -20,16 +20,25 @@ message DevsAlive{
 }
 
 message DataOccur{
-  	required string duid = 1;
+  	required int64 duid = 1;
 }
 
 message DataReq{
-	required string duid=1;
+	required int64 duid=1;
 	required int64 lat_msg_id=2;
 }
 
+// “ipc.server_occur”
+message SvrOccurReq{
+    required int64 duid=1;
+}
+
+message SvrOccurRes{
+   required int64 result=1;
+}
+
 message DataRes{
-   	required string from_duid=1;
+   	required int64 from_duid=1;
    	required int64 msg_id=2;
    	required bytes msg_data=3;
 }
@@ -41,8 +50,8 @@ message DataResBatchs{
 // 外部调用rpc协议
 // 推送给设备的信息
 message PushDeviceReq{
-	required string from_duid=1;
-  	required string to_duid = 2;
+	required int64 from_duid=1;
+  	required int64 to_duid = 2;
   	required bytes msg_data = 3;
 	required int32 expire_time=4;
 	optional int32 req_id = 5; // 用来回传,便于异步操作
