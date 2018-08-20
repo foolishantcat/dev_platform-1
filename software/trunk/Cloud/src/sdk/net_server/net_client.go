@@ -1,8 +1,8 @@
 package net_server
 
 import (
-	"sdk/logger"
 	"net"
+	"sdk/logger"
 	"time"
 )
 
@@ -20,15 +20,13 @@ type netClient struct {
 	close_chan      chan int
 	logger          logger.ILogger
 	conn            net.Conn
-	parse_func      func(buf []byte) ([]byte, int)
-	contxt          interface{}
+	parse_func      func(buf []byte) ([]byte, int, int)
 }
 
 func createNetClient(config *clientConfig,
 	net_func INetFunc,
 	conn net.Conn,
-	contxt interface{},
-	parse_func func(buf []byte) ([]byte, int)) *netClient {
+	parse_func func(buf []byte) ([]byte, int, int)) *netClient {
 
 	io_chan := make(chan []byte, config.max_out_packet_nums)
 	close_chan := make(chan int)
@@ -48,76 +46,123 @@ func createNetClient(config *clientConfig,
 		contxt,
 	}
 
-	go net_client.sendRoutine()
-	go net_client.recvRountine()
+	go net_client.run()
 	return net_client
 }
 
-func (this *netClient) sendRoutine() {
+func (this *netClient) run() {
+	var event netEvent
 
-	// 发送数据
-	accept_conn := this.conn
-	defer accept_conn.Close()
-	for {
-		select {
-		case data_buf := <-this.io_chan:
-			_, err := accept_conn.Write(data_buf)
-			if err != nil {
-				this.logger.LogSysWarn("Send Failed!ErrString=%s,PeerIP=%s", err.Error(), accept_conn.RemoteAddr())
-				return
-			}
-			break
-		case <-this.close_chan:
-			this.logger.LogSysWarn("Close Client!PeerIP=%s", accept_conn.RemoteAddr())
-			return
-		}
-	}
-}
-
-func (this *netClient) recvRountine() {
-	parse_offset := 0
-	offset := 0
+	recv_data_offset := 0
+	recv_data_len := 0
+	send_data_offset := 0
+	send_data_len := 0
+	last_elasped_time := time.Now().Unix()
 
 	packet_buf := make([]byte, this.max_packet_size)
 	accept_conn := this.conn
-	defer func() {
-		accept_conn.Close()
-		this.net_func.OnNetErr(this, this.contxt)
-	}()
+	defer accept_conn.Close()
+
 	for {
-		// 设置超时时间
-		accept_conn.SetReadDeadline(time.Now().Add(time.Duration(this.alram_time) * time.Second))
-
-		// 开始读数据
-		bytes_size, err := accept_conn.Read(packet_buf[offset:])
-		if err != nil {
-			this.logger.LogSysWarn("PeerIP=%s,Connection Closed!ErrString=%s", accept_conn.RemoteAddr(), err.Error())
-			return
-		}
-		offset += bytes_size
-
-		// 解析包
 		for {
-			buf, size_parsed := this.parse_func(packet_buf[parse_offset:offset])
-			if size_parsed == 0 { // 接受不完整，退出
-				break
+			// 设置读写粒度为1s
+			dead_time := time.Now()
+			dead_time.Add(1)
+			accept_conn.SetDeadline(dead_time)
+
+			offset := recv_data_offset
+			offset += recv_data_len
+
+			// 开始读数据
+			bytes_size, err := accept_conn.Read(packet_buf[offset:])
+			if err != nil {
+				opt_err := err.(*net.OpError)
+				if opt_err.Timeout() { // 超时
+					if time.Now().Unix()-last_elasped_time >= int64(this.alram_time) {
+						this.logger.LogSysWarn("Connection TimeOut!")
+
+						this.net_func.OnNetErr(this, this.contxt)
+						return
+					}
+					break
+				} else {
+					this.logger.LogSysWarn("Connection Closed!ErrString=%s", err.Error())
+					this.net_func.OnNetErr(this, this.contxt)
+					return
+				}
 			}
 
-			this.net_func.OnNetRecv(this, buf, this.contxt)
-			parse_offset += size_parsed
+			last_elasped_time = time.Now().Unix()
+			recv_data_len += bytes_size
+
+			// 解析包
+			for {
+				end_data_offset := recv_data_offset
+				end_data_offset += recv_data_len
+
+				buf, parsed_len, hash_key := this.net_func.OnParsing(this,
+					packet_buf[recv_data_offset:end_data_offset],
+					this.contxt)
+
+				if parsed_len < 0 { // 返回参数如果小于0， 断开连接
+					return
+				} else if parsed_len == 0 { // 解析完毕，退出循环
+					break
+				}
+
+				recv_data_offset += int(parsed_len)
+				recv_data_len -= int(parsed_len)
+			}
+			if recv_data_len >= len(packet_buf) { // 缓冲区已经满
+				this.logger.LogSysError("Packet Size Out Of Range!")
+				this.net_func.OnNetErr(this, this.contxt)
+				return
+			}
+			if (recv_data_offset + recv_data_len) >= len(packet_buf) { // 重置offset
+				for i := 0; i < recv_data_len; i++ {
+					packet_buf[i] = packet_buf[recv_data_offset+i]
+				}
+				recv_data_offset = 0
+			}
 		}
 
-		if parse_offset >= len(packet_buf) { // 缓冲区已经满
-			this.logger.LogSysError("PeerIP=%s,Packet Size Out Of Range!", accept_conn.RemoteAddr())
-			this.net_func.OnNetErr(this, this.contxt)
-			return
-		}
-		if offset >= len(packet_buf) { // 重置offset
-			copy(packet_buf[0:], packet_buf[parse_offset:offset])
-			offset -= parse_offset
-			parse_offset = 0
+		// 发送数据
+		for {
+			if send_data_len == 0 {
+				// 重新读取发送队列通道
+				if !waitNetEvent(&event, this.io_chan, 0) { // 队列为空
+					continue
+				}
+				if event.event_type == NET_CLOSE {
+					this.logger.LogSysWarn("Connection Closed by Client!")
+					this.net_func.OnNetErr(this, this.contxt)
+					return
+				}
+			}
+
+			// 更新时间戳
+			last_elasped_time = time.Now().Unix()
+
+			// 写超时1s
+			dead_time := time.Now()
+			dead_time.Add(1)
+			accept_conn.SetDeadline(dead_time)
+			bytes_size, err = accept_conn.Write(event.data_buf[send_data_offset:])
+			send_data_len -= bytes_size
+			if err != nil {
+				opt_err := err.(*net.OpError)
+				if opt_err.Timeout() {
+					this.logger.LogSysError("Send Buf TimeOut!")
+					break // 跳出写数据
+				}
+
+				this.logger.LogSysWarn("Send Failed!ErrString=%s", err.Error())
+				this.net_func.OnNetErr(this, this.contxt)
+				return
+			}
 		}
 	}
+
 }
 
 func (this *netClient) Send(buff []byte) bool {

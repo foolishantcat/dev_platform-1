@@ -7,12 +7,13 @@ import (
 )
 
 type INetFunc interface {
-	OnNetAccpet(peer_ip string) (interface{}, bool, func(buf []byte) ([]byte, int))
-	OnNetRecv(client INetClient, packet_buf []byte, contxt interface{})
-	OnNetErr(client INetClient, contxt interface{})
+	OnNetAccpet(peer_ip string) (bool, func(buf []byte) ([]byte, int, int))
+	OnNetRecv(client INetClient, packet_buf []byte, params interface{})
+	OnNetErr(client INetClient, params interface{})
 }
 
 type INetServer interface {
+	AddParams(param interface{})
 	Start(config *Config) bool
 	Stop()
 }
@@ -23,10 +24,10 @@ type clientConfig struct {
 	alram_time          int
 }
 type netServer struct {
-	map_addr_inf    map[string]string
 	local_ip        string
 	port            string
 	client_conf     clientConfig
+	params_array    []interface{}
 	max_accpet_nums int
 	has_accpet_nums int
 	net_func        INetFunc
@@ -46,11 +47,15 @@ type netEvent struct {
 
 func CreateNetServer(net_func INetFunc) INetServer {
 	net_server := new(netServer)
-	net_server.map_addr_inf = make(map[string]string, 10)
 	net_server.logger = logger.Instance()
 	net_server.net_func = net_func
+	net_server.params_array = make([]interface{}, 0, 10)
 
 	return net_server
+}
+
+func (this *netServer) AddParams(params interface{}) {
+	this.params_array = append(this.params_array, params)
 }
 
 func (this *netServer) Start(config *Config) bool {
@@ -86,7 +91,7 @@ func (this *netServer) Start(config *Config) bool {
 		return false
 
 	}
-	go this.listenRounte(listen)
+	this.listenRounte(listen)
 	return true
 }
 
@@ -99,16 +104,14 @@ func (this *netServer) listenRounte(listen net.Listener) {
 			return
 
 		} else {
-			go func() {
-				// 创建netClient
-				contxt, ok, parser := this.net_func.OnNetAccpet(conn.RemoteAddr().String())
-				if ok {
-					createNetClient(&this.client_conf, this.net_func, conn, contxt, parser)
-				} else {
-					this.logger.LogSysInfo("Remote Client Closed!PeerIP=%s", conn.RemoteAddr().String())
-					conn.Close()
-				}
-			}()
+			// 创建netClient
+			contxt, ok, parser := this.net_func.OnNetAccpet(conn.RemoteAddr().String())
+			if ok {
+				createNetClient(&this.client_conf, this.net_func, conn, contxt, parser)
+			} else {
+				this.logger.LogSysInfo("Remote Client Closed!PeerIP=%s", conn.RemoteAddr().String())
+				conn.Close()
+			}
 
 		}
 	}

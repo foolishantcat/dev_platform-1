@@ -211,7 +211,7 @@ func doSendData(pool *cConnPool, params interface{}) {
 		// 发送失败
 		if conns_lst.Len() <= 0 {
 			//回调发送失败函数
-			go pool.conns_conf.Set_func.Af_send_err(send_conns.net_addr, send_conns.send_buf)
+			//go pool.conns_conf.Set_func.Af_send_err(send_conns.net_addr, send_conns.send_buf)
 
 		} else { // 发送数据
 			conn_v := conns_lst.Remove(conns_lst.Front()).(*connsValue)
