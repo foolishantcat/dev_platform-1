@@ -4,6 +4,7 @@ import (
 	"os"
 	"sdk/logger"
 	"strconv"
+
 	"github.com/larspensjo/config"
 )
 
@@ -55,11 +56,11 @@ func (this *Config) LoadFile(file_path string) bool {
 		log_obj.LogAppError("Ini File Err!ErrString=%s", err.Error())
 		return false
 	}
-	
+
 	var value string
 
 	// host
-	if !ini_conf.HasOption("listen", "host"){
+	if !ini_conf.HasOption("listen", "host") {
 		log_obj.LogAppError("Has No [listen.host] Section!")
 		return false
 	}
@@ -77,7 +78,7 @@ func (this *Config) LoadFile(file_path string) bool {
 		log_obj.LogAppError("Has No [listen.max_accpet_nums] Section!")
 		return false
 	}
-	value, _= ini_conf.String("listen", "max_accpet_nums")
+	value, _ = ini_conf.String("listen", "max_accpet_nums")
 	this.max_accpet_nums, _ = strconv.Atoi(value)
 
 	// timeout
@@ -85,7 +86,7 @@ func (this *Config) LoadFile(file_path string) bool {
 		log_obj.LogAppError("Has No [listen.timeout] Section!")
 		return false
 	}
-	value, _= ini_conf.String("listen", "timeout")
+	value, _ = ini_conf.String("listen", "timeout")
 	this.alram_time, _ = strconv.Atoi(value)
 
 	// packet_nums
@@ -93,7 +94,7 @@ func (this *Config) LoadFile(file_path string) bool {
 		log_obj.LogAppError("Has No [listen.packet_nums] Section!")
 		return false
 	}
-	value, _= ini_conf.String("listen", "packet_nums")
+	value, _ = ini_conf.String("listen", "packet_nums")
 	this.max_out_packet_nums, _ = strconv.Atoi(value)
 
 	// packet_size
@@ -101,7 +102,7 @@ func (this *Config) LoadFile(file_path string) bool {
 		log_obj.LogAppError("Has No [listen.packet_size] Section!")
 		return false
 	}
-	value, _= ini_conf.String("listen", "packet_size")
+	value, _ = ini_conf.String("listen", "packet_size")
 	this.max_packet_size, _ = strconv.Atoi(value)
 
 	return true
